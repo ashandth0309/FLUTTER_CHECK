@@ -1,25 +1,29 @@
 workflows:
   ios-workflow:
-    name: iOS Build and Publish
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: "main"  # List item as dictionary
+    name: iOS Build
     environment:
-      groups:
-        - app_store_credentials
+      xcode: latest  # Specify Xcode version here instead of under 'macos'
+    triggering:
+      events: [push]
+      branch_patterns:
+        - pattern: "main"
     scripts:
-      - name: Build iOS
+      - name: Checkout code
         script: |
+          git submodule update --init --recursive
+
+      - name: Find Xcode project
+        script: |
+          find . -name "*.xcodeproj" -print
+          find . -name "*.xcworkspace" -print
+
+      - name: Build IPA
+        script: |
+          cd ios
           xcode-project build-ipa \
-            --project "YourApp.xcodeproj" \
-            --scheme "YourApp"
+            --workspace "YourApp.xcworkspace" \
+            --scheme "YourApp" \
+            --archive-flags "SKIP_INSTALL=NO" \
+            --export-options-plist "../ExportOptions.plist"
     artifacts:
-      - build/ios/ipa/*.ipa
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_API_KEY
-        key_id: $APP_STORE_KEY_ID
-        issuer_id: $APP_STORE_ISSUER_ID
-        submit_to_testflight: true
+      - ios/build/ios/ipa/*.ipa

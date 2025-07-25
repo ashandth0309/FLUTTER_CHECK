@@ -1,0 +1,15 @@
+workflows:
+  ios:
+    name: iOS build
+    triggering:
+      events: [push]
+      branches: ["main"]
+    build:
+      platform: ios
+      mode: release
+    distribution:
+      ios_code_signing:
+        method: automatic
+        api_key: $APP_STORE_CONNECT_API_KEY
+        issuer_id: $APP_STORE_ISSUER_ID
+        bundle_id: your.bundle.id

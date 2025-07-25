@@ -2,22 +2,54 @@ workflows:
   flutter-ios-workflow:
     name: Flutter iOS Build
     environment:
-      xcode: latest  # Codemagic will use macOS for iOS builds
+      xcode: latest
     triggering:
       events: [push]
       branch_patterns:
         - pattern: "main"
     scripts:
-      # 1. Flutter setup (works on Windows)
-      - name: Flutter dependencies
+      - name: Verify Flutter project
         script: |
+          flutter doctor
           flutter pub get
-
-      # 2. Codemagic will handle iOS-specific steps on their macOS builders
-      - name: Build iOS IPA
+          
+      - name: Generate iOS files (if missing)
+        script: |
+          if [ ! -d "ios" ]; then
+            flutter create --platforms ios .
+          fi
+          
+      - name: Install Pods (if Podfile exists)
+        script: |
+          if [ -f "ios/Podfile" ]; then
+            cd ios
+            pod install
+          else
+            echo "No Podfile found - generating one"
+            cd ios
+            pod init
+            pod install
+          fi
+          
+      - name: Create ExportOptions.plist
+        script: |
+          cat <<EOF > ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>uploadBitcode</key>
+              <true/>
+              <key>uploadSymbols</key>
+              <true/>
+          </dict>
+          </EOF>
+          
+      - name: Build IPA
         script: |
           cd ios
-          pod install
           xcode-project build-ipa \
             --workspace "Runner.xcworkspace" \
             --scheme "Runner" \

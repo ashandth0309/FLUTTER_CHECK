@@ -8,21 +8,43 @@ workflows:
       branch_patterns:
         - pattern: "main"
     scripts:
-      - name: Find Xcode files
+      - name: Check project structure
         script: |
-          find . -name "*.xcworkspace" -o -name "*.xcodeproj"
-          
-      - name: Install Pods
+          echo "Project contents:"
+          ls -la
+          echo "iOS directory contents:"
+          ls -la ios/ || echo "No ios directory"
+
+      - name: Install Pods (if needed)
         script: |
-          cd ios
-          pod install
-          
+          # Check for Podfile in different locations
+          if [ -f "ios/Podfile" ]; then
+            echo "Found Podfile in ios directory"
+            cd ios
+            pod install
+          elif [ -f "Podfile" ]; then
+            echo "Found Podfile in root directory"
+            pod install
+          else
+            echo "No Podfile found - proceeding without CocoaPods"
+          fi
+
       - name: Build IPA
         script: |
-          cd ios
+          # Determine correct project path
+          if [ -f "ios/YourApp.xcworkspace" ]; then
+            cd ios
+            WORKSPACE="YourApp.xcworkspace"
+          elif [ -f "YourApp.xcworkspace" ]; then
+            WORKSPACE="YourApp.xcworkspace"
+          else
+            echo "Error: Could not find .xcworkspace file"
+            exit 1
+          fi
+
           xcode-project build-ipa \
-            --workspace "MyApp.xcworkspace" \  # ACTUAL workspace name
-            --scheme "MyApp" \  # ACTUAL scheme name
+            --workspace "$WORKSPACE" \
+            --scheme "YourApp" \
             --export-options-plist "ExportOptions.plist"
     artifacts:
-      - ios/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa

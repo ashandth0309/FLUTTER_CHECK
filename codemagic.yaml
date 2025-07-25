@@ -2,28 +2,27 @@ workflows:
   ios-workflow:
     name: iOS Build
     environment:
-      xcode: latest  # Specify Xcode version here instead of under 'macos'
+      xcode: latest
     triggering:
       events: [push]
       branch_patterns:
         - pattern: "main"
     scripts:
-      - name: Checkout code
+      - name: Find Xcode files
         script: |
-          git submodule update --init --recursive
-
-      - name: Find Xcode project
+          find . -name "*.xcworkspace" -o -name "*.xcodeproj"
+          
+      - name: Install Pods
         script: |
-          find . -name "*.xcodeproj" -print
-          find . -name "*.xcworkspace" -print
-
+          cd ios
+          pod install
+          
       - name: Build IPA
         script: |
           cd ios
           xcode-project build-ipa \
-            --workspace "YourApp.xcworkspace" \
-            --scheme "YourApp" \
-            --archive-flags "SKIP_INSTALL=NO" \
-            --export-options-plist "../ExportOptions.plist"
+            --workspace "MyApp.xcworkspace" \  # ACTUAL workspace name
+            --scheme "MyApp" \  # ACTUAL scheme name
+            --export-options-plist "ExportOptions.plist"
     artifacts:
       - ios/build/ios/ipa/*.ipa

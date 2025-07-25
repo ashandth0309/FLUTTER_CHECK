@@ -8,43 +8,42 @@ workflows:
       branch_patterns:
         - pattern: "main"
     scripts:
-      - name: Check project structure
+      - name: Find Xcode files
         script: |
-          echo "Project contents:"
-          ls -la
-          echo "iOS directory contents:"
-          ls -la ios/ || echo "No ios directory"
-
-      - name: Install Pods (if needed)
-        script: |
-          # Check for Podfile in different locations
-          if [ -f "ios/Podfile" ]; then
-            echo "Found Podfile in ios directory"
-            cd ios
-            pod install
-          elif [ -f "Podfile" ]; then
-            echo "Found Podfile in root directory"
-            pod install
-          else
-            echo "No Podfile found - proceeding without CocoaPods"
-          fi
+          echo "Project structure:"
+          ls -R
+          echo "Xcode workspace locations:"
+          find . -name "*.xcworkspace" -print
+          echo "Xcode project locations:"
+          find . -name "*.xcodeproj" -print
 
       - name: Build IPA
         script: |
-          # Determine correct project path
-          if [ -f "ios/YourApp.xcworkspace" ]; then
+          # Try common locations
+          if [ -f "ios/Runner.xcworkspace" ]; then
+            # Flutter project structure
             cd ios
-            WORKSPACE="YourApp.xcworkspace"
+            xcode-project build-ipa \
+              --workspace "Runner.xcworkspace" \
+              --scheme "Runner" \
+              --export-options-plist "../ExportOptions.plist"
           elif [ -f "YourApp.xcworkspace" ]; then
-            WORKSPACE="YourApp.xcworkspace"
+            # Native iOS project in root
+            xcode-project build-ipa \
+              --workspace "YourApp.xcworkspace" \
+              --scheme "YourApp" \
+              --export-options-plist "ExportOptions.plist"
+          elif [ -f "ios/YourApp.xcodeproj" ]; then
+            # Project file instead of workspace
+            cd ios
+            xcode-project build-ipa \
+              --project "YourApp.xcodeproj" \
+              --scheme "YourApp" \
+              --export-options-plist "../ExportOptions.plist"
           else
-            echo "Error: Could not find .xcworkspace file"
+            echo "ERROR: No Xcode workspace or project found"
+            find . -name "*.xcworkspace" -o -name "*.xcodeproj"
             exit 1
           fi
-
-          xcode-project build-ipa \
-            --workspace "$WORKSPACE" \
-            --scheme "YourApp" \
-            --export-options-plist "ExportOptions.plist"
     artifacts:
       - build/ios/ipa/*.ipa

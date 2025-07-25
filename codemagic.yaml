@@ -1,15 +1,25 @@
 workflows:
-  ios:
-    name: iOS build
+  ios-workflow:
+    name: iOS Build and Publish
     triggering:
-      events: [push]
-      branches: ["main"]
-    build:
-      platform: ios
-      mode: release
-    distribution:
-      ios_code_signing:
-        method: automatic
+      events:
+        - push
+      branch_patterns:
+        - pattern: "main"  # List item as dictionary
+    environment:
+      groups:
+        - app_store_credentials
+    scripts:
+      - name: Build iOS
+        script: |
+          xcode-project build-ipa \
+            --project "YourApp.xcodeproj" \
+            --scheme "YourApp"
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
         api_key: $APP_STORE_CONNECT_API_KEY
+        key_id: $APP_STORE_KEY_ID
         issuer_id: $APP_STORE_ISSUER_ID
-        bundle_id: your.bundle.id
+        submit_to_testflight: true

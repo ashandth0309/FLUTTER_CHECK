@@ -1,49 +1,26 @@
 workflows:
-  ios-workflow:
-    name: iOS Build
+  flutter-ios-workflow:
+    name: Flutter iOS Build
     environment:
-      xcode: latest
+      xcode: latest  # Codemagic will use macOS for iOS builds
     triggering:
       events: [push]
       branch_patterns:
         - pattern: "main"
     scripts:
-      - name: Find Xcode files
+      # 1. Flutter setup (works on Windows)
+      - name: Flutter dependencies
         script: |
-          echo "Project structure:"
-          ls -R
-          echo "Xcode workspace locations:"
-          find . -name "*.xcworkspace" -print
-          echo "Xcode project locations:"
-          find . -name "*.xcodeproj" -print
+          flutter pub get
 
-      - name: Build IPA
+      # 2. Codemagic will handle iOS-specific steps on their macOS builders
+      - name: Build iOS IPA
         script: |
-          # Try common locations
-          if [ -f "ios/Runner.xcworkspace" ]; then
-            # Flutter project structure
-            cd ios
-            xcode-project build-ipa \
-              --workspace "Runner.xcworkspace" \
-              --scheme "Runner" \
-              --export-options-plist "../ExportOptions.plist"
-          elif [ -f "YourApp.xcworkspace" ]; then
-            # Native iOS project in root
-            xcode-project build-ipa \
-              --workspace "YourApp.xcworkspace" \
-              --scheme "YourApp" \
-              --export-options-plist "ExportOptions.plist"
-          elif [ -f "ios/YourApp.xcodeproj" ]; then
-            # Project file instead of workspace
-            cd ios
-            xcode-project build-ipa \
-              --project "YourApp.xcodeproj" \
-              --scheme "YourApp" \
-              --export-options-plist "../ExportOptions.plist"
-          else
-            echo "ERROR: No Xcode workspace or project found"
-            find . -name "*.xcworkspace" -o -name "*.xcodeproj"
-            exit 1
-          fi
+          cd ios
+          pod install
+          xcode-project build-ipa \
+            --workspace "Runner.xcworkspace" \
+            --scheme "Runner" \
+            --export-options-plist "../ExportOptions.plist"
     artifacts:
-      - build/ios/ipa/*.ipa
+      - ios/build/ios/ipa/*.ipa
